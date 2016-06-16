@@ -120,7 +120,7 @@ gboolean gst_structure_to_v8_value_iterate( GQuark field_id, const GValue *val, 
 	return true;
 }
 
-v8::Handle<v8::Object> gst_structure_to_v8( v8::Handle<v8::Object> obj, GstStructure *struc ) {
+v8::Handle<v8::Object> gst_structure_to_v8( v8::Handle<v8::Object> obj, const GstStructure *struc ) {
 	const gchar *name = gst_structure_get_name(struc);
 	obj->Set(Nan::New<v8::String>("name").ToLocalChecked(), Nan::New<v8::String>(name).ToLocalChecked());
 	gst_structure_foreach( struc, gst_structure_to_v8_value_iterate, &obj );
@@ -484,10 +484,11 @@ void Pipeline::_polledBus( uv_work_t *req, int n ) {
 			Nan::New<v8::String>("type").ToLocalChecked(), 
 			Nan::New<v8::String>(GST_MESSAGE_TYPE_NAME(br->msg)).ToLocalChecked()
 			);
-	
-        if( br->msg->structure ) {
-            gst_structure_to_v8( m, br->msg->structure );
-        }
+
+		const GstStructure* structure = gst_message_get_structure(br->msg);
+		if(structure) {
+			gst_structure_to_v8( m, structure );
+		}
 
 		if( GST_MESSAGE_TYPE(br->msg) == GST_MESSAGE_ERROR ) {
 			GError *err = NULL;
