@@ -485,9 +485,9 @@ void Pipeline::_polledBus( uv_work_t *req, int n ) {
 			Nan::New<v8::String>(GST_MESSAGE_TYPE_NAME(br->msg)).ToLocalChecked()
 			);
 	
-//        if( br->msg->structure ) {
-//            gst_structure_to_v8( m, br->msg->structure );
-//        }
+        if( br->msg->structure ) {
+            gst_structure_to_v8( m, br->msg->structure );
+        }
 
 		if( GST_MESSAGE_TYPE(br->msg) == GST_MESSAGE_ERROR ) {
 			GError *err = NULL;
