@@ -138,6 +138,7 @@ class GObjectWrap : public Nan::ObjectWrap {
 		void play();
 		void pause();
 		void stop();
+		void ready();
 		
 	private:
 		GObjectWrap();
@@ -152,6 +153,7 @@ class GObjectWrap : public Nan::ObjectWrap {
 		static NAN_METHOD(_play);
 		static NAN_METHOD(_pause);
 		static NAN_METHOD(_stop);
+		static NAN_METHOD(_ready);
 
 //		static v8::Handle<v8::Value> _onBufferAvailable(const v8::Arguments& info);
 		static void _doPullBuffer( uv_work_t *req );
@@ -176,7 +178,14 @@ void GObjectWrap::Init() {
 			Nan::New<v8::FunctionTemplate>(_get)->GetFunction());
 	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("set").ToLocalChecked(),
 			Nan::New<v8::FunctionTemplate>(_set)->GetFunction());
-
+	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("play").ToLocalChecked(),
+			Nan::New<v8::FunctionTemplate>(_play)->GetFunction());
+	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("pause").ToLocalChecked(),
+			Nan::New<v8::FunctionTemplate>(_pause)->GetFunction());
+	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("stop").ToLocalChecked(),
+			Nan::New<v8::FunctionTemplate>(_stop)->GetFunction());
+	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("ready").ToLocalChecked(),
+			Nan::New<v8::FunctionTemplate>(_ready)->GetFunction());
 	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("pull").ToLocalChecked(),
 			Nan::New<v8::FunctionTemplate>(_pull)->GetFunction());
 
@@ -254,6 +263,10 @@ void GObjectWrap::stop() {
     gst_element_set_state( GST_ELEMENT(obj), GST_STATE_NULL );
 }
 
+void GObjectWrap::ready() {
+    gst_element_set_state( GST_ELEMENT(obj), GST_STATE_READY );
+}
+
 void GObjectWrap::pause() {
     gst_element_set_state( GST_ELEMENT(obj), GST_STATE_PAUSED );
 }
@@ -305,7 +318,12 @@ NAN_METHOD(GObjectWrap::_stop) {
 	obj->stop();
 	scope.Escape(Nan::True());
 }
-
+NAN_METHOD(GObjectWrap::_ready) {
+	Nan::EscapableHandleScope scope;
+	GObjectWrap* obj = Nan::ObjectWrap::Unwrap<GObjectWrap>(info.This());
+	obj->ready();
+	scope.Escape(Nan::True());
+}
 struct SampleRequest {
 	uv_work_t request;
 	Nan::Persistent<v8::Function> cb_buffer, cb_caps;
@@ -399,6 +417,7 @@ class Pipeline : public Nan::ObjectWrap {
 		void play();
 		void pause();
 		void stop();
+		void ready();
 		void forceKeyUnit(GObject* sink, int cnt);
 		
 		GObject *findChild( const char *name );
@@ -414,6 +433,7 @@ class Pipeline : public Nan::ObjectWrap {
 		static NAN_METHOD(_play);
 		static NAN_METHOD(_pause);
 		static NAN_METHOD(_stop);
+		static NAN_METHOD(_ready);
 		static NAN_METHOD(_forceKeyUnit);
 		static NAN_METHOD(_findChild);
 
@@ -442,6 +462,10 @@ void Pipeline::play() {
 
 void Pipeline::stop() {
     gst_element_set_state( GST_ELEMENT(pipeline), GST_STATE_NULL );
+}
+
+void Pipeline::ready() {
+    gst_element_set_state( GST_ELEMENT(pipeline), GST_STATE_READY );
 }
 
 void Pipeline::pause() {
@@ -483,6 +507,10 @@ void Pipeline::_polledBus( uv_work_t *req, int n ) {
 		m->Set(
 			Nan::New<v8::String>("type").ToLocalChecked(), 
 			Nan::New<v8::String>(GST_MESSAGE_TYPE_NAME(br->msg)).ToLocalChecked()
+			);
+		m->Set(
+			Nan::New<v8::String>("src").ToLocalChecked(), 
+			Nan::New<v8::String>(GST_MESSAGE_SRC_NAME(br->msg)).ToLocalChecked()
 			);
 
 		const GstStructure* structure = gst_message_get_structure(br->msg);
@@ -548,6 +576,8 @@ void Pipeline::Init( v8::Handle<v8::Object> exports ) {
 			Nan::New<v8::FunctionTemplate>(_pause)->GetFunction());
 	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("stop").ToLocalChecked(),
 			Nan::New<v8::FunctionTemplate>(_stop)->GetFunction());
+	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("ready").ToLocalChecked(),
+			Nan::New<v8::FunctionTemplate>(_ready)->GetFunction());
 	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("forceKeyUnit").ToLocalChecked(),
 			Nan::New<v8::FunctionTemplate>(_forceKeyUnit)->GetFunction());
 	tpl->PrototypeTemplate()->Set(Nan::New<v8::String>("findChild").ToLocalChecked(),
@@ -590,6 +620,12 @@ NAN_METHOD(Pipeline::_stop) {
 	Nan::EscapableHandleScope scope;
 	Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
 	obj->stop();
+	scope.Escape(Nan::True());
+}
+NAN_METHOD(Pipeline::_ready) {
+	Nan::EscapableHandleScope scope;
+	Pipeline* obj = Nan::ObjectWrap::Unwrap<Pipeline>(info.This());
+	obj->ready();
 	scope.Escape(Nan::True());
 }
 NAN_METHOD(Pipeline::_forceKeyUnit) {
