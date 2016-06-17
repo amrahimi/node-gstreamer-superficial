@@ -94,17 +94,16 @@ v8::Handle<v8::Value> gvalue_to_v8( const GValue *gv ) {
 
 void v8_to_gvalue( v8::Handle<v8::Value> v, GValue *gv ) {
 	if( v->IsNumber() ) {
-        g_value_init( gv, G_TYPE_FLOAT );
-        g_value_set_float( gv, v->NumberValue() );
+		g_value_init( gv, G_TYPE_FLOAT );
+		g_value_set_float( gv, v->NumberValue() );
 	} else if( v->IsString() ) {
 		v8::String::Utf8Value value( v->ToString() );
-        g_value_init( gv, G_TYPE_STRING );
-        g_value_set_string( gv, *value );
+		g_value_init( gv, G_TYPE_STRING );
+		g_value_set_string( gv, *value );
 	} else if( v->IsBoolean() ) {
-        g_value_init( gv, G_TYPE_BOOLEAN );
-        g_value_set_boolean( gv, v->BooleanValue() );
+		g_value_init( gv, G_TYPE_BOOLEAN );
+		g_value_set_boolean( gv, v->BooleanValue() );
 	}
-
 	return;
 }
 
@@ -252,6 +251,19 @@ void GObjectWrap::set( const char *name, const v8::Handle<v8::Value> value ) {
 	GValue gv;
 	memset( &gv, 0, sizeof( gv ) );
 	v8_to_gvalue( value, &gv );
+	if( strcmp(name, "active-pad") == 0 && G_VALUE_HOLDS_STRING(&gv)) {
+	  const char *pad_name = g_value_get_string (&gv);
+	  GstPad *pad  = gst_element_get_static_pad(GST_ELEMENT(obj), pad_name);
+	  if(!pad) {
+		Nan::ThrowError(v8::String::Concat(
+				Nan::New<v8::String>("No such pady: ").ToLocalChecked(),
+				Nan::New<v8::String>(pad_name).ToLocalChecked()
+		));
+		return;
+	  }
+          g_object_set (obj, "active-pad", pad, NULL);
+          return;
+	} 
 	g_object_set_property( obj, name, &gv );
 }
 
